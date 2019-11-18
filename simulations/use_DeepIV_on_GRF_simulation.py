@@ -32,6 +32,7 @@ locals().update(all_data)
 
 x, z, t, y = X_train, Z_train, W_train, Y_train
 
+
 print("Data shapes:\n\
 Features:{x},\n\
 Instruments:{z},\n\
@@ -40,32 +41,33 @@ Response:{y}".format(**{'x':x.shape, 'z':z.shape,
                         't':t.shape, 'y':y.shape}))
 
 
+########################
+# Set model parameters
+########################
+
 n = x.shape[0]
 dropout_rate = min(1000./(1000. + n), 0.5)
-epochs = int(1500000./float(n)) # heuristic to select number of epochs
+l2 = 0.0001
+# epochs = int(1500000./float(n)) # heuristic to select number of epochs
 epochs = 300
 batch_size = 100
+hidden = [128, 64, 32]
+act = "relu"
 
 # Build and fit treatment model
 instruments = Input(shape=(z.shape[1],), name="instruments")
 features = Input(shape=(x.shape[1],), name="features")
 treatment_input = Concatenate(axis=1)([instruments, features])
 
-hidden = [128, 64, 32]
-
-act = "relu"
-
-n_components = 10
-
-est_treat = architectures.feed_forward_net(treatment_input, lambda x: densities.mixture_of_gaussian_output(x, n_components),
+est_treat = architectures.feed_forward_net(treatment_input,
+                                           output=Dense(1, activation='sigmoid'),
                                            hidden_layers=hidden,
-                                           dropout_rate=dropout_rate, l2=0.0001,
+                                           dropout_rate=dropout_rate, l2=l2,
                                            activations=act)
 
 treatment_model = Treatment(inputs=[instruments, features], outputs=est_treat)
 treatment_model.compile('adam',
-                        loss="mixture_of_gaussians",
-                        n_components=n_components)
+                        loss="binary_crossentropy")
 
 treatment_model.fit([z, x], t, epochs=epochs, batch_size=batch_size)
 
@@ -74,10 +76,11 @@ treatment_model.fit([z, x], t, epochs=epochs, batch_size=batch_size)
 treatment = Input(shape=(t.shape[1],), name="treatment")
 response_input = Concatenate(axis=1)([features, treatment])
 
-est_response = architectures.feed_forward_net(response_input, Dense(1),
+est_response = architectures.feed_forward_net(response_input,
+                                              output=Dense(1),
                                               activations=act,
                                               hidden_layers=hidden,
-                                              l2=0.001,
+                                              l2=l2,
                                               dropout_rate=dropout_rate)
 
 response_model = Response(treatment=treatment_model,
@@ -92,11 +95,11 @@ response_model.fit([z, x], y, epochs=epochs, verbose=1,
 # treatment W -- so the treatment effect
 # is the difference h(x,w=1) - h(x,w=0)
 ####################################
+
 DeepIV_tau_test = response_model.predict([X_test,np.ones_like(W_test)]) -\
                   response_model.predict([X_test,np.zeros_like(W_test)])
 DeepIV_MSE = mean_squared_error(y_true = tau_test,
                                 y_pred = DeepIV_tau_test)
-
 
 
 params = load('output/temp/params.pkl')

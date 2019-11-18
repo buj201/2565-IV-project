@@ -10,4 +10,3 @@ conda deactivate
 # Fit DeepIV
 conda activate DeepIV
 python -m simulations.use_DeepIV_on_GRF_simulation
-
