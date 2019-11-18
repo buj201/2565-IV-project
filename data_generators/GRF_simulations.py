@@ -45,8 +45,9 @@ def get_mu(kappa, additive, p, X, nuisance_terms = [5,6], nuisance_scale=3):
 def get_Y(mu, W, tau, epsilon):
     return mu + (W - 1/2)*tau + epsilon
 
-def get_sample_X_Y_tau(p, n, omega, kappa, additive, nuisance):
-
+def get_sample(p, n, omega, kappa, additive, nuisance, seed):
+    
+    np.random.seed(seed)
     X = sample_X(n,p)
     epsilon = sample_epsilon(n)
     Q = sample_Q(n,omega,epsilon)
@@ -56,4 +57,4 @@ def get_sample_X_Y_tau(p, n, omega, kappa, additive, nuisance):
     mu = get_mu(kappa, additive, p, X)
     Y = get_Y(mu, W, tau, epsilon)
     
-    return X, Y, tau
+    return X, Y, W, Z, tau
