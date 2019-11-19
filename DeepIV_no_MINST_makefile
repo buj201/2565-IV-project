@@ -1,0 +1,2 @@
+output/MSEs/DeepIV_no_MINST_simulation/n_$(n)__seed_$(seed)__ypcor_$(ypcor).csv: 
+	./DeepIV_crossover_simulation.sh $(n) $(seed) $(ypcor)

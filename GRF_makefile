@@ -1,0 +1,3 @@
+output/MSEs/GRF_simulation/n_$(n)__p_$(p)__kappa_$(kappa)__omega_$(omega)__additive_$(additive)__nuisance_$(nuisance)__seed_$(seed).csv: 
+	./GRF_crossover_simulation.sh $(n) $(p) $(kappa) $(omega) \
+        $(additive) $(nuisance) $(seed)

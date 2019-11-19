@@ -48,7 +48,7 @@ Response:{y}".format(**{'x':x.shape, 'z':z.shape,
 n = x.shape[0]
 
 dropout_rate = min(1000./(1000. + n), 0.5)
-epochs = int(1500000./float(n)) # heuristic to select number of epochs
+epochs = min(int(1500000./float(n)),300) # heuristic to select number of epochs
 l2 = 0.0001
 batch_size = 100
 hidden = [128, 64, 32]
@@ -106,4 +106,7 @@ params = load('output/temp/params.pkl')
 params['DeepIV_MSE'] = DeepIV_MSE
 
 pd.Series(params).to_frame().T.set_index('seed')\
-  .to_csv('output/MSEs/MSE_test.csv')
+  .to_csv('output/MSEs/GRF_simulation/'+\
+          f'n_{params["n"]}__p_{params["p"]}__kappa_{params["kappa"]}__' +\
+          f'omega_{params["omega"]}__additive_{params["additive"]}__nuisance_{params["nuisance"]}'+\
+          f'seed_{params["seed"]}.csv')

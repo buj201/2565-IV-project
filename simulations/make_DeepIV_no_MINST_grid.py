@@ -24,5 +24,6 @@ for ix, row in params.iterrows():
     file_name = 'output/MSEs/DeepIV_no_MINST_simulation/'+\
                 f'n_{n}__seed_{seed}__ypcor_{ypcor}.csv'
     print(file_name)
-    subprocess.run(["make", file_name, f'seed={seed}', f'n={n}', f'ypcor={ypcor}'])
+    subprocess.run(["make", file_name, '--file=DeepIV_no_MINST_makefile',
+                    f'seed={seed}', f'n={n}', f'ypcor={ypcor}'])
     
