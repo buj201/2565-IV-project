@@ -15,6 +15,7 @@ GRF=importr('grf')
 ##########################
 
 from joblib import load
+from os import path
 
 import numpy as np
 import pandas as pd
@@ -81,4 +82,5 @@ params['forest_MSE'] = forest_MSE
 params['iv_series_MSE'] = iv_series_MSE
 
 pd.Series(params).to_frame().T.set_index('seed')\
-  .to_csv('output/MSEs/MSE_test_2.csv')
+  .to_csv('output/MSEs/DeepIV_no_MINST_simulation/'+\
+          f'n_{params["n"]}__seed_{params["seed"]}__ypcor_{params["ypcor"]}.csv')
