@@ -1,0 +1,3 @@
+output/MSEs/GRF_simulation_CV/CVregularizers_True__STAGE2__n_$(n)__p_$(p)__kappa_$(kappa)__omega_$(omega)__additive_$(additive)__nuisance_$(nuisance).csv: simulations/DeepIV_on_GRF_CV.py
+	./GRF_CV_grid.sh $(n) $(p) $(kappa) $(omega) \
+        $(additive) $(nuisance) $(seed)

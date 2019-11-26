@@ -13,11 +13,23 @@ from deepiv.models import Treatment, Response
 import deepiv.architectures as architectures
 import deepiv.densities as densities
 
+from .BinaryTreatmentModel import make_shared_net, add0, add1
+
 import tensorflow as tf
 
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras.layers.merge import Concatenate
+
+from keras.layers import Input, Dense, Add, multiply, Activation
+from keras.models import Model, Sequential
+from keras.layers.merge import Concatenate
+
+from keras import regularizers
+
+from keras.backend import zeros, ones
+import keras.backend as K
+from keras.layers.core import Lambda
 
 import numpy as np
 import pandas as pd
@@ -105,24 +117,40 @@ treatment_model = Treatment(inputs=[instruments, features], outputs=est_treat)
 treatment_model.compile('adam', loss="binary_crossentropy")
 treatment_model.fit([z, x], t, epochs=epochs, batch_size=batch_size)
 
+
+pi1 = treatment_model.predict([z, x])
+pi0 = (1-pi1)
+    
+pi1_test = treatment_model.predict([Z_test, X_test])
+pi0_test = (1-pi1_test)
+
 # Build and fit response model
 
-treatment = Input(shape=(t.shape[1],), name="treatment")
-response_input = Concatenate(axis=1)([features, treatment])
+features = Input(shape=(x.shape[1],), name="features")
+pi0_input = Input(shape=(pi0.shape[1],), name="pi0")
+pi1_input = Input(shape=(pi1.shape[1],), name="pi1")
 
-est_response = architectures.feed_forward_net(response_input,
-                                              output=Dense(1),
-                                              activations=act,
-                                              hidden_layers=hidden,
-                                              dropout_rate=stage2_dropout,
-                                              l2=stage2_l2)
+response_input0 = Lambda(add0, name='Add0')(features)
+response_input1 = Lambda(add1, name='Add1')(features)
 
-response_model = Response(treatment=treatment_model,
-                          inputs=[features, treatment],
-                          outputs=est_response)
+shared = make_shared_net(x.shape[1]+1, act, hidden, dropout_rate=0.1, l2=0.001)
+
+h0 = shared(response_input0)
+h1 = shared(response_input1)
+
+weighted_yhat = Add(name='weighted_yhat')([
+    multiply([pi0_input, h0]),
+    multiply([pi1_input, h1]),
+])
+
+response_model = Model(inputs=[features, pi0_input, pi1_input],
+                       outputs=weighted_yhat)
 response_model.compile('adam', loss='mse')
-response_model.fit([z, x], y, epochs=epochs, verbose=1,
-                   batch_size=batch_size, samples_per_batch=2)
+
+# Now fit the model
+    
+response_model.fit([x, pi0, pi1], y, epochs=epochs, verbose=1,
+                   batch_size=batch_size)
 
 ####################################
 # The GRF simulation has a binary
@@ -130,8 +158,13 @@ response_model.fit([z, x], y, epochs=epochs, verbose=1,
 # is the difference h(x,w=1) - h(x,w=0)
 ####################################
 
-DeepIV_tau_test = response_model.predict([X_test,np.ones_like(W_test)]) -\
-                  response_model.predict([X_test,np.zeros_like(W_test)])
+add_out_func = K.function(inputs = response_model.input,
+                          outputs = [response_model.get_layer('weighted_yhat').output])
+            
+hhat1 = add_out_func([X_test, np.zeros_like(pi0_test), np.ones_like(pi1_test)])[0]
+hhat0 = add_out_func([X_test, np.ones_like(pi0_test), np.zeros_like(pi1_test)])[0]
+
+DeepIV_tau_test = (hhat1 - hhat0).flatten()
 DeepIV_MSE = mean_squared_error(y_true = tau_test,
                                 y_pred = DeepIV_tau_test)
 

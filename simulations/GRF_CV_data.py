@@ -34,7 +34,12 @@ n_test = 5000
 # Get sample and split
 ##########################
 
-def main(p, n, n_test, omega, kappa, additive, nuisance, seed, CV_regularizers):
+def main(p, n, n_test, omega, kappa, additive, nuisance, seed):
+
+    #############################
+    # Make data
+    #############################
+    
     X, Y, W, Z, tau = get_sample(
         p, n + n_test, omega, kappa, additive, nuisance, seed
     )
@@ -67,42 +72,8 @@ def main(p, n, n_test, omega, kappa, additive, nuisance, seed, CV_regularizers):
 
     dump(all_data, 'output/temp/data_for_DeepIV.pkl')
 
-    ##########################
-    # Fit forest
-    ##########################
-
-    forest = GRF.instrumental_forest(X_train,
-                                     to_FloatVector(Y_train),
-                                     to_FloatVector(W_train),
-                                     to_FloatVector(Z_train))
-    r_predict = robjects.r['predict']
-    forest_tau_test = to_array(r_predict(forest,X_test))
-    forest_MSE = mean_squared_error(y_true = tau_test,
-                                    y_pred = forest_tau_test.flatten())
-
-    ##########################
-    # Fit IV series regression
-    ##########################
-
-    import os
-    print(os.getcwd())
-    r_source = robjects.r['source']
-    r_source("./R_utils/iv_series_regression.R")
-    r_iv_series = robjects.globalenv['iv.series']
-
-    iv_series_tau_test = r_iv_series(
-        X_train,
-        to_FloatVector(Y_train),
-        to_FloatVector(W_train),
-        to_FloatVector(Z_train),
-        X_test
-    )
-    iv_series_tau_test = to_array(iv_series_tau_test)
-    iv_series_MSE = mean_squared_error(y_true = tau_test,
-                                       y_pred = iv_series_tau_test.flatten())
-
     #############################
-    # Write output
+    # Write params
     #############################
 
     params = {
@@ -113,10 +84,7 @@ def main(p, n, n_test, omega, kappa, additive, nuisance, seed, CV_regularizers):
         'additive': additive,
         'nuisance': nuisance,
         'n_test': n_test,
-        'seed': seed,
-        'iv_series_MSE': iv_series_MSE,
-        'forest_MSE': forest_MSE,
-        'CV_regularizers': CV_regularizers
+        'seed': seed
     }
 
 
@@ -132,14 +100,9 @@ if __name__=='__main__':
     parser.add_argument('-additive','--additive', help='Aditivity of signal', choices=('True','False'))
     parser.add_argument('-nuisance','--nuisance', help='Presence of nuisance main effect terms', choices=('True','False'))
     parser.add_argument('-s','--seed', help='Random seed', type=int)
-    parser.add_argument('-CV','--CV-regularizers', help='Use searched regularizer hyperparams.', choices=('True','False'))
     args = parser.parse_args()
-    
     args.additive = args.additive == 'True'
     args.nuisance = args.nuisance == 'True'
-    args.CV_regularizers = args.CV_regularizers == 'True'
-    
-    print(args.CV_regularizers)
     
     main(args.p, args.n_samples, n_test, args.omega, args.kappa,
-         args.additive, args.nuisance, args.seed, args.CV_regularizers)
+         args.additive, args.nuisance, args.seed)
