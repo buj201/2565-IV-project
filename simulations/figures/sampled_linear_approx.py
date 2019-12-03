@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set_context('notebook',font_scale=1.3)
+sns.set_context('notebook',font_scale=1.5)
 
 from keras.utils.vis_utils import plot_model,model_to_dot
 
@@ -29,6 +29,8 @@ import keras.backend as K
 from keras.layers.core import Lambda
 
 from ..BinaryTreatmentModel import *
+
+from scipy.stats import linregress
 
 #####################
 # Generate data
@@ -117,11 +119,11 @@ sample = np.random.choice(X_test.shape[0])
 fig, ax = plt.subplots(figsize=(12,8))
 ax.hist(treatment_model.sample([Z_test[[sample],:],X_test[[sample],:]],10000),bins=50,
         density=True,
-        label='First stage DNN distribution\n$\\hat{p}_{\\theta}(T|X=x_i,Z=z_i)$')
-ax.axvline(W_test[sample],color='red',label='Observed $T=t$')
+        label='First stage DNN distribution\n$\\hat{p}_{\\phi}(D|X=x_i,Z=z_i)$')
+ax.axvline(W_test[sample],color='red',label='Observed $D=d$')
 ax.legend(loc='best')
 ax.set_title('Visualizing the first stage distribution\n(For a single sampled $(x_i, z_i)$ test set instance)',size=22)
-ax.set_xlabel('$T$')
+ax.set_xlabel('$D$')
 ax.set_ylabel('Density')
 
 plt.savefig('output/figures/first_stage_distribution.png')
@@ -162,15 +164,29 @@ for ix in range(N_GRID):
     t_val = t_grid[ix]
     gridded_counterfactual_estimates[:,ix] = response_model.predict([X_test,np.ones_like(W_test)*t_val]).flatten()
     
-    
+# Get corresponding taus
+def get_coef(y, x=t_grid):
+    slope, intercept, r_value, p_value, std_err = linregress(x,y)
+    return slope
+
+DeepIV_tau_test = np.apply_along_axis(get_coef, 1, gridded_counterfactual_estimates)
+
+
+### Make plot
 sample = np.random.choice(X_test.shape[0],50)
 
-fig, ax = plt.subplots(figsize=(12,6))
+fig, axarr = plt.subplots(1,2, figsize=(18,6), gridspec_kw={'width_ratios': [1.5, 1]})
 
 for s in sample:
-    ax.plot(t_grid,gridded_counterfactual_estimates[s,:], alpha=0.5, color='grey', linewidth=0.5)
+    axarr[0].plot(t_grid,gridded_counterfactual_estimates[s,:], alpha=0.5, color='grey', linewidth=0.5)
 
-ax.set_ylabel('$\\hat{h}_\phi(x_i,t)$')
-ax.set_xlabel('$t$')
-ax.set_title('Estimated counterfactual prediction functions $\\hat{h}_\phi(x_i,t)$\n(sampled for N=50 test set instances, e.g. 50 $x_i$ values)')
+axarr[0].set_ylabel('$\\hat{h}_\\theta(d,x_i)$')
+axarr[0].set_xlabel('$d$')
+axarr[0].set_title('Estimated counterfactual prediction functions $\\hat{h}_\\theta(d,x_i)$\n(sampled for N=50 test set instances, e.g. 50 $x_i$ values)')
+
+axarr[1].hist(DeepIV_tau_test[sample],orientation="horizontal", color='grey', alpha=0.5,)
+axarr[1].set_xlabel("Frequency")
+axarr[1].set_ylabel('$\\hat{\\tau}_i$ (slope from linear approximation)')
+axarr[1].set_title('Estimating $\\hat{\\tau}_i$ via linear approximation')
+
 plt.savefig('output/figures/linearization_justification.png')

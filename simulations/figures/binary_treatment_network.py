@@ -85,14 +85,14 @@ model_to_dot(response_model).write('output/figures/dot_file.dot')
 
 new_names = {
     'Features: InputLayer': "X=x",
-    'Add0: Lambda': 'Concatenate (x, T=0)',
-    'Add1: Lambda': 'Concatenate (x, T=1)',
-    'pi0: InputLayer': 'p(T=0\|X=x,Z=z) (from stage 1 DNN)',
-    'pi1: InputLayer': 'p(T=1\|X=x,Z=z) (from stage 1 DNN)',
-    'h_hat: Sequential': 'DNN h(x,t)',
-    'mult1: Multiply': 'p(T=1\|X=x)h(x,t=1)',
-    'mult0: Multiply': 'p(T=0\|X=x)h(x,t=0)',
-    'weighted_yhat: Add': 'p(T=0\|X=x)h(x,t=0) + p(T=1\|X=x)h(x,t=1)',
+    'Add0: Lambda': 'Concatenate (x, D=0)',
+    'Add1: Lambda': 'Concatenate (x, D=1)',
+    'pi0: InputLayer': 'p(D=0\|X=x,Z=z) (from stage 1 DNN)',
+    'pi1: InputLayer': 'p(D=1\|X=x,Z=z) (from stage 1 DNN)',
+    'h_hat: Sequential': 'Stage 2 DNN h(x,d)',
+    'mult1: Multiply': 'p(D=1\|X=x)h(x,d=1)',
+    'mult0: Multiply': 'p(D=0\|X=x)h(x,d=0)',
+    'weighted_yhat: Add': 'p(D=0\|X=x)h(x,d=0) + p(D=1\|X=x)h(x,d=1)',
 }
 
 for old, new in new_names.items():
